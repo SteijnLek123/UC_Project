@@ -31,7 +31,7 @@ label_encoder = LabelEncoder()
 Porto_data['highway'] = label_encoder.fit_transform(Porto_data['highway'])
 Porto_data['element_type'] = label_encoder.fit_transform(Porto_data['element_type'])
 
-#Clustering
+#Clustering###
 group_size = 30
 clf.fit_predict(Porto_data.values)
 clusters = clf.labels_

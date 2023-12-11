@@ -44,7 +44,7 @@ def preprocess(dataframe):
 
       return dataframe
 
-Porto_data = preprocess(Porto_data)
+Porto_data_p = preprocess(Porto_data)
 
 clf_Porto = KMeansConstrained(
      n_clusters=int(round(len(Porto_data)/100)),
@@ -53,9 +53,9 @@ clf_Porto = KMeansConstrained(
     random_state=0)
 
 #Clustering###
-clf_Porto.fit_predict(Porto_data.values)
+clf_Porto.fit_predict(Porto_data_p.values)
 clusters = clf_Porto.labels_
-Porto_data['cluster'] = clusters
+Porto_data_p['cluster'] = clusters
 
 
 def NeuralNet(dataframe):
@@ -99,7 +99,14 @@ def NeuralNet(dataframe):
       return embeddings
 
 
-# for x in range(1,Porto_data['cluster'].unique()+1):
-#      all_embeddings_per_cluster = []
-#      all_embeddings_per_cluster.append(NeuralNet(Porto_data))
- 
+
+
+all_embeddings = pd.DataFrame()
+
+for cluster in Porto_data_p['cluster'].unique():
+    cluster_data = Porto_data_p[Porto_data_p['cluster'] == cluster]
+    embeddings = NeuralNet(cluster_data)
+    embeddings_df = pd.DataFrame(embeddings, index=cluster_data.index)
+    embeddings_df['cluster'] = cluster
+    all_embeddings = pd.concat([all_embeddings, embeddings_df])
+

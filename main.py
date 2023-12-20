@@ -21,6 +21,8 @@ from tensorflow.keras.layers import Input, Dense
 from sklearn.model_selection import train_test_split
 import tensorflow as tf
 import re
+from sklearn.decomposition import PCA
+
 
 
 
@@ -58,7 +60,28 @@ clusters = clf_Porto.labels_
 Porto_data_p['cluster'] = clusters
 
 
-def NeuralNet(dataframe):
+def apply_pca_and_clustering(data, clf):
+    data['cluster'] = clf.fit_predict(data[['element_type','highway_tag','geometry_float']].values)
+    
+    # Apply PCA
+    pca = PCA(n_components=2)
+    principal_components = pca.fit_transform(data[['element_type','highway_tag','geometry_float']])
+    
+    # Concatenate the cluster labels with the PCA results
+    pca_df = pd.DataFrame(data=principal_components, columns=['PCA1', 'PCA2'])
+    pca_df['cluster'] = data['cluster']
+    
+    # Plot the PCA results
+    plt.figure(figsize=(10, 7))
+    plt.scatter(pca_df['PCA1'], pca_df['PCA2'], c=pca_df['cluster'], cmap='viridis', marker='o')
+    plt.title('PCA of Porto Data by Cluster')
+    plt.xlabel('Principal Component 1')
+    plt.ylabel('Principal Component 2')
+    plt.colorbar(label='Cluster')
+    plt.show()
+
+
+def NeuralNet(len_highway, len_element, dataframe):
       dataframe = dataframe[['element_type','highway_tag','geometry_float']]
       X1 = dataframe[['element_type', 'geometry_float']].values
       X2 = dataframe[['highway_tag', 'geometry_float']].values
@@ -75,8 +98,8 @@ def NeuralNet(dataframe):
       shared_layers = Dense(64, activation='relu')(input_layer)
       shared_layers = Dense(64, activation='relu',name='finaldense')(input_layer)
 
-      output_task1 = Dense(10, activation='softmax', name='task1')(shared_layers)
-      output_task2 = Dense(2, activation='softmax', name='task2')(shared_layers)
+      output_task1 = Dense(len_highway, activation='softmax', name='task1')(shared_layers)
+      output_task2 = Dense(len_element, activation='softmax', name='task2')(shared_layers)
       output_task3 = Dense(1, activation='linear', name='task3')(shared_layers)
 
       model = Model(inputs=input_layer, outputs=[output_task1, output_task2, output_task3])
@@ -99,13 +122,11 @@ def NeuralNet(dataframe):
       return embeddings
 
 
-
-
 all_embeddings = pd.DataFrame()
 
 for cluster in Porto_data_p['cluster'].unique():
     cluster_data = Porto_data_p[Porto_data_p['cluster'] == cluster]
-    embeddings = NeuralNet(cluster_data)
+    embeddings = NeuralNet(cluster_data['highway_tag'].unique(), cluster_data['element_type'].unique(), cluster_data)
     embeddings_df = pd.DataFrame(embeddings, index=cluster_data.index)
     embeddings_df['cluster'] = cluster
     all_embeddings = pd.concat([all_embeddings, embeddings_df])
